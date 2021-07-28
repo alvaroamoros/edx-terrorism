@@ -1,12 +1,29 @@
+# Álvaro Amorós Rodríguex
 # Financing sources of rebel groups
 # Working paper
-# Álvaro Amorós Rodrígeuz
-# 26/07/2021
+# 28/07/21
+
 
 # Loading libraries and packages
 knitr::opts_chunk$set(echo = TRUE)
 pkgs <- c('knitr', 'stargazer')
 repmis::LoadandCite(pkgs, file = 'Rpackages.bib')
+
+if (!require(readxl)) install.packages('package')
+if (!require(readr)) install.packages('package')
+if (!require(tidyverse)) install.packages('package')
+if (!require(dplyr)) install.packages('package')
+if (!require(ggplot2)) install.packages('package')
+if (!require(tidytext)) install.packages('package')
+if (!require(stargazer)) install.packages('package')
+if (!require(gridExtra)) install.packages('package')
+if (!require(caret)) install.packages('package')
+if (!require(tree)) install.packages('package')
+if (!require(rpart)) install.packages('package')
+if (!require(rattle)) install.packages('package')
+if (!require(rpart.plot)) install.packages('package')
+if (!require(RColorBrewer)) install.packages('package')
+if (!require(randomForest)) install.packages('package')
 
 library(readxl)
 library(readr)
@@ -15,17 +32,22 @@ library(dplyr)
 library(ggplot2)
 library(scales)
 library(tidytext)
- library(stargazer)
+library(stargazer)
 library(gridExtra)
+library(caret)
+library(tree)
+library(rpart)
+library(rattle)
+library(rpart.plot)
+library(RColorBrewer)
+library(randomForest)
 
 # Max number of digits
 options(digits = 2)
 
-# PREPARING DATA
-
 # Load data sets
-GTD_groups <- read_excel("dataset GTD groups nov2020.xlsx") # Data provided by Ignacio Sanchez Cuenca on groups with territorial control
-GTD_attacks <- read_csv("globalterrorismdb_0718dist.csv") # Global Terrorism Database
+GTD_groups <- read_excel("~/Documents/projects/r-projects/edx-terrorism/dataset GTD groups nov2020.xlsx") # Data provided by Ignacio Sanchez Cuenca on groups with territorial control
+GTD_attacks <- read_csv("~/Documents/projects/r-projects/edx-terrorism/globalterrorismdb_0718dist.csv") # Global Terrorism Database
 
 # keep only groups that are in both datasets
 GTD_attacks <- GTD_attacks %>%
@@ -34,6 +56,7 @@ GTD_attacks <- GTD_attacks %>%
 
 # The same terrorist group appears twice, so we eliminate one of the entries
 GTD_groups<- GTD_groups %>%
+  
   filter(gname %in% GTD_attacks$gname,
          !is.na(gname))
 GTD_groups <- GTD_groups[-314,]
@@ -47,8 +70,6 @@ GTD <- GTD %>%
   filter(!is.na(summary),
          !is.na(control),
          iyear > 1997)
-
-# DESCRIPTIVE STATISTICS
 
 # Total n of incidents registered in GTD
 total_incidents <- nrow(GTD)
@@ -76,8 +97,6 @@ GTD %>%
   filter(control == 0) %>%
   distinct(eventid) %>%
   nrow()
-
-# GRAFICAL ANALYSIS
 
 # N of attacks by year
 graph_1 <- GTD %>%
@@ -113,10 +132,8 @@ graph_2 <- GTD %>%
   theme_minimal() +
   coord_flip()
 
-# Grid joining both graphs
 grid.arrange(graph_1, graph_2, top= "Incidence of attacks", ncol =2)
 
-# TEXT ANALYSIS
 
 # Establish regexp patterns to try to ignore irrelevant data like dates or numbers
 date.pattern <- ' ?(0|1)?[1-9]/([0-9]{4}|[0-9]{2}) ?'
@@ -129,16 +146,16 @@ summary_words <- GTD %>%
   mutate(summary = str_replace_all(summary, number.pattern , ""))  %>% # previously defined patterns
   mutate(summary = str_replace_all(summary, single.pattern , ""))  %>%
   unnest_tokens(word, summary, token = "words") # "unnest_tokens" takes each single word in the "description" column and turns it in
-                                                 # its own specific row
+# its own specific row
 
 # Manually filter out some common words in the text, that do not add any valuable information to our project
 summary_words <- summary_words %>%
   filter(word != "west",
-       word != "north",
-       word != "pakistan",
-       word != "Liberation",
-       word != "liberation",
-       word != "united") 
+         word != "north",
+         word != "pakistan",
+         word != "Liberation",
+         word != "liberation",
+         word != "united") 
 
 # Create a dummy variable for words that where in descriptions of groups with territorial control
 summary_words <- summary_words %>%
@@ -152,16 +169,16 @@ control_or <- summary_words %>%
   mutate(or = (No_territroail_con + 0.5) / (sum(No_territroail_con) - No_territroail_con + 0.5) / 
            ( (Territorial_con + 0.5) / (sum(Territorial_con) - Territorial_con + 0.5)))
 
+
 # Five words with the highest odds ratios
 control_or %>% filter(No_territroail_con + Territorial_con > 1000 & No_territroail_con > 100 & Territorial_con > 100) %>%
   arrange(desc(or))%>% head(5) %>%  knitr::kable(caption = "Highest ratio. Groups without territorial control", align = "l", col.names  = c("Word", "N. Control", "N. No Control","Odds Ratio"))
 
 # Five words with the lowest odds ratios
 control_or %>% filter(No_territroail_con + Territorial_con > 1000 & No_territroail_con >100 & Territorial_con > 100) %>%
-arrange((or)) %>%  head(5) %>%  knitr::kable(caption = "Lowest ratio. Groups without territorial control", align = "l", col.names  = c("Word", "N. Control", "N. No Control","Odds Ratio"))
+  arrange((or)) %>%  head(5) %>%  knitr::kable(caption = "Lowest ratio. Groups without territorial control", align = "l", col.names  = c("Word", "N. Control", "N. No Control","Odds Ratio"))
 
 # Words related to economic activities
-
 # Create a vector including words related to different types of economic activities
 all_words <- c("bank", "robbery", "theft", "break-in", "burglary", "heist", "looting", "larceny", "extortion", "shakedown", "money", "payment","kidnap", "kidnapping", "capture", "hijack", "abducted", "abduction")
 
@@ -172,15 +189,12 @@ economic_activities <- control_or %>% filter(word %in% all_words) %>%
   arrange(desc(or))                                        
 
 # Show results in a tabble
-rbind(x) %>%
+rbind(economic_activities) %>%
   knitr::kable(caption = "Economic Incidents", align = "l", col.names  = c("Word", "Territorial control", "No territorial control", "Odds ratio."))
 
-# REGRESSION ANALYSIS
-# Preparing data for regression
-
+# Preparing data
 # To safe memory I will drop some of the data used to calculate the odds rations
 rm(summary_words,control_or)
-
 # I will add a dummy variable to the GTD, coded as 1 if the event was described as a robbery and 0 otherwise. For that I will check for specific words in the description
 t <- grep("bank", GTD$summary, value = FALSE) # Generate a vector with the indexes of the events that include the word "bank" in their descriptions
 GTD$robbery <- 0 # Dummy for robbery coded as 0
@@ -243,7 +257,6 @@ GTD$kidnap[t] <- 1
 GTD <- GTD %>%
   mutate(kidnap = ifelse(GTD$attacktype1 != 6, 0, GTD$kidnap ))
 
-# Regressions
 # Regression whee territorial control is the dependent variable and the regressors are the three dummies for robbery extortion and kidnapping
 model_1 <- GTD %>%
   mutate(year_factor = as.factor(iyear),
@@ -251,7 +264,7 @@ model_1 <- GTD %>%
          control = as.factor(control)) %>%
   glm(control ~ robbery  + extortion + kidnap, family = "binomial", data = .)
 
-# I add the variable country and year as factor variables to the regression. They will act as control variables for country and year fixed efects,
+# I add the variable country and year as factor variables to the regression. They will act as control variables for country and year fixed effects,
 model_2 <- GTD %>%
   mutate(year_factor = as.factor(iyear),
          country_factor = as.factor(country.x),
@@ -261,3 +274,62 @@ model_2 <- GTD %>%
 # To finish I output the regression results in latex
 stargazer::stargazer(model_1, model_2,
                      digits = 3, type = 'latex', omit = c("year_factor", "country_factor"))
+
+# We start by generating a new data set without unnecessary columns, that will interfere in our prediction
+
+GTD_predictions <- GTD %>%
+  select(-resolution, -approxdate, -region, -gname, -country.x, -country_pacho, -provstate, -latitude, -longitude, -location, -summary, 
+         -attacktype1, -attacktype2, -attacktype3, -targsubtype1, -targsubtype2, -targsubtype3, -targtype2, -targtype2_txt, -targsubtype2,
+         -targsubtype2_txt, -targsubtype3, -targsubtype3_txt, -corp2, -corp3, -target2, -natlty2, -natlty2_txt, -targtype3, -targtype3_txt,
+         -target3, -natlty3, -natlty3_txt, -gsubname, -gsubname2, -gname3, -gsubname3, -motive, -attacktype2_txt, -attacktype3_txt, -gname2,
+         -guncertain2, -guncertain3, -claimmode, -claimmode_txt, -claim2, -claimmode2, -claimmode2_txt, -claim3, -claimmode3, -claimmode3_txt,
+         -compclaim, -weaptype2, -weaptype2_txt, -weapsubtype2, -weapsubtype2_txt, -weaptype3, -weaptype3_txt, -weapsubtype3, -weapsubtype3_txt,
+         -weaptype4, -weaptype4_txt, -weapsubtype4, -weapsubtype4_txt, -weapdetail, -propextent, -propextent_txt, -propvalue, -propcomment, -nhostkid
+         ,-nhostkidus, -nhours, -ndays, -divert, -kidhijcountry, -ransom, -ransomamt, -ransomamtus, -ransompaid, -ransompaidus, -ransomnote, -hostkidoutcome, 
+         -hostkidoutcome_txt, -nreleased, -addnotes, -scite1, -scite2, -dbsource, -INT_LOG, -INT_IDEO, -INT_MISC, -INT_ANY, -related, -control_post1997_sandler,
+         -firstyear, -lastyear, -var10, -control_gtd1, -country.y, -scite3, -weapsubtype1_txt, -alternative, -alternative_txt, -nperps, -nperpcap, -eventid, -city, -country_txt,
+         -corp1, -target1, -natlty1_txt, -targsubtype1_txt, -targtype1, -natlty1) %>%
+  na.omit()
+
+
+
+# Transform the dependent variable in a factor variable
+GTD_predictions$control <- as.factor(ifelse(GTD_predictions$control == 1, "Yes", "No"))
+
+# Divide in train and test sets
+set.seed(1, sample.kind="Rounding") 
+
+test_index <- createDataPartition(y = GTD_predictions$control, times = 1, p = 0.2,
+                                  list = FALSE)
+
+train_set <- GTD_predictions[-test_index,]
+test_set <- GTD_predictions[test_index,]
+
+# Set restrictions to the model to avoid overfitting
+treeCon <- rpart.control(minsplit = 1000, minbucket = round(1000 / 3), cp = 0.01)
+
+# Train the moddel with all predictors and the restrictions, on the train set
+fit <- rpart(control~., data = train_set, method = 'class', control = treeCon)
+
+# Plot
+rpart.plot(fit)
+
+# Predictions
+y_hat <- predict(fit, test_set, type = 'class') 
+
+# Results
+confusionMatrix(y_hat, test_set$control, positive = "Yes")
+
+# Set seed
+set.seed(1, sample.kind="Rounding") 
+# Fiting the moddel
+fit_forest <- randomForest(control~., data = train_set) 
+
+# Making predictions
+y_hat_forest <- predict(fit_forest, test_set)
+
+# Prot for randome forest error
+plot(fit_forest) 
+
+# Results for random forest
+confusionMatrix(y_hat_forest, test_set$contro, positive = "Yes")
